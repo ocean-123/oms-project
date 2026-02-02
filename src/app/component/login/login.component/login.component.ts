@@ -26,7 +26,7 @@ export class LoginComponent {
   ) {
     // Redirect if already logged in
     if (this.authService.isLoggedIn()) {
-      this.router.navigate(['/employees']);
+      this.router.navigate(['/dashboard']);
     }
   }
 
@@ -38,7 +38,7 @@ export class LoginComponent {
       next: (response) => {
         console.log('Login successful:', response);
         this.loading = false;
-        this.router.navigate(['/employees']);
+        this.router.navigate(['/dashboad']);
       },
       error: (err) => {
         console.error('Login error:', err);

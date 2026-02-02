@@ -7,7 +7,7 @@ import { StoreActivity } from '../../models/store-activity.model';
   providedIn: 'root'
 })
 export class StoreActivityService {
-  private apiUrl = 'http://localhost:8080/api/store-activity';
+  private apiUrl = 'http://localhost:8848/api/store-activity';
 
   constructor(private http: HttpClient) {}
 

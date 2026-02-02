@@ -5,7 +5,7 @@
         <h1 class="text-3xl font-bold text-gray-900">Office Activity</h1>
         <p class="text-gray-600 mt-2">Track items issued to employees</p>
       </div>
-      <button (click)="showForm = true" 
+      <button (click)="showForm = true"
               class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -14,12 +14,113 @@
       </button>
     </div>
 
-    <!-- Issue Item Form Modal -->
+    <!-- Loading & Error States -->
+    <div class="mb-8">
+      <div *ngIf="isLoading.employees || isLoading.items || isLoading.activities" class="text-center py-8">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p class="mt-4 text-gray-600">Loading data...</p>
+      </div>
+
+      <div *ngIf="loadError.employees || loadError.items || loadError.activities" class="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-red-700">
+              {{ loadError.employees || loadError.items || loadError.activities }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Feed -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Activity Feed</h2>
+
+        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <!-- Employee filter -->
+          <select [(ngModel)]="selectedEmployeeId"
+                  (change)="onFilterChange()"
+                  class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 min-w-[180px]">
+            <option [value]="null">All Employees</option>
+            <option *ngFor="let emp of employees" [value]="emp.id">
+              {{ emp.fullName }}
+            </option>
+          </select>
+
+          <!-- Date filter type -->
+          <select [(ngModel)]="dateFilter.type"
+                  (change)="onFilterChange()"
+                  class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 min-w-[140px]">
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="custom">Custom Range</option>
+          </select>
+
+          <!-- Custom date range -->
+          <div *ngIf="dateFilter.type === 'custom'" class="flex flex-col sm:flex-row gap-3">
+            <input type="date" [(ngModel)]="dateFilter.startDate" (change)="onFilterChange()"
+                   class="px-3 py-2 border border-gray-300 rounded-lg">
+            <input type="date" [(ngModel)]="dateFilter.endDate" (change)="onFilterChange()"
+                   class="px-3 py-2 border border-gray-300 rounded-lg">
+          </div>
+        </div>
+      </div>
+
+      <!-- Activities list -->
+      <div class="space-y-4 max-h-96 overflow-y-auto">
+        <div *ngFor="let activity of filteredActivities"
+             class="border-l-4 pl-4 py-3 hover:bg-gray-50 transition-colors rounded-r-lg"
+             [ngClass]="getActivityColor(activity.activityType)">
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <div class="flex items-center space-x-2 mb-1">
+                <span class="text-2xl">{{ getActivityIcon(activity.activityType) }}</span>
+                <span class="font-semibold text-gray-900">{{ activity.employee.fullName || 'Unknown' }}</span>
+                <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                      [ngClass]="getActivityColor(activity.activityType)">
+                  {{ activity.activityType }}
+                </span>
+              </div>
+              <p class="text-sm text-gray-700 mb-1">
+                <span class="font-medium">Received:</span>
+                {{ activity.quantity }} × {{ activity.item.itemName || 'Unknown item' }}
+                <span *ngIf="activity.amount && activity.amount > 0" class="text-orange-600 font-semibold">
+                  (NPR {{ activity.amount | number:'1.2-2' }})
+                </span>
+              </p>
+              <p class="text-xs text-gray-600 italic" *ngIf="activity.remarks">
+                "{{ activity.remarks }}"
+              </p>
+              <p class="text-xs text-gray-500 mt-1">
+                {{ activity.issueDate | date:'medium' }} • Issued by {{ activity.issuedBy || 'System' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="filteredActivities.length === 0" class="text-center py-12">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <p class="mt-4 text-gray-600">No activities found for the selected filters</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue Item Modal -->
     <div *ngIf="showForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="showForm = false">
       <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" (click)="$event.stopPropagation()">
         <div class="p-6">
           <h2 class="text-2xl font-bold text-gray-900 mb-6">Issue Item to Employee</h2>
-          
+
           <form (ngSubmit)="submitActivity()" class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Employee</label>

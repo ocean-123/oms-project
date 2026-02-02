@@ -7,7 +7,7 @@ import { OfficeActivity } from '../../models/office-activity.model';
   providedIn: 'root'
 })
 export class OfficeActivityService {
-  private apiUrl = 'http://localhost:8080/api/office-activity';
+  private apiUrl = 'http://localhost:8848/api/office-activity';
 
   constructor(private http: HttpClient) {}
 
@@ -18,4 +18,8 @@ export class OfficeActivityService {
   getByEmployee(employeeId: number): Observable<OfficeActivity[]> {
     return this.http.get<OfficeActivity[]>(`${this.apiUrl}/employee/${employeeId}`);
   }
+
+  getAllActivities(): Observable<OfficeActivity[]> {
+  return this.http.get<OfficeActivity[]>(`${this.apiUrl}/all`);
+}
 }

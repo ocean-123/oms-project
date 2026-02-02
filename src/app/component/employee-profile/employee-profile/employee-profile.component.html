@@ -33,23 +33,26 @@
           <div class="flex items-center mb-4">
             <!-- ✅ FIXED: Real profile image with fallback to avatar -->
             <div class="relative">
-              <img 
-                *ngIf="employee.profileImage"
-                [src]="employee.profileImage" 
-                [alt]="employee.fullName"
-                class="w-16 h-16 rounded-full object-cover ring-2 ring-white shadow-md"
-                (error)="onImageError($event)"
-              />
-              <div 
-                *ngIf="!employee.profileImage"
-                class="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md ring-2 ring-white">
-                {{ employee.fullName.charAt(0) }}
-              </div>
-            </div>
+  <!-- ✅ REAL IMAGE if profileImage exists (not null) -->
+  <img 
+    *ngIf="employee.profileImage"
+    [src]="employee.profileImage" 
+    [alt]="employee.fullName"
+    class="w-16 h-16 rounded-full object-cover ring-2 ring-white shadow-md"
+    (error)="onImageError($event)"
+  />
+  
+  <!-- ✅ AVATAR if profileImage is null/empty -->
+  <div 
+    *ngIf="!employee.profileImage"
+    class="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md ring-2 ring-white">
+    {{ employee.fullName.charAt(0).toUpperCase() }}
+  </div>
+</div>
             
             <div class="ml-4 flex-1">
               <h3 class="text-lg font-semibold text-gray-900">{{ employee.fullName }}</h3>
-              <p class="text-sm text-gray-600">{{ employee.employeeCode }}</p>
+              <p class="text-sm text-gray-600">EMPID:{{ employee.employeeCode }}</p>
             </div>
             <span class="px-3 py-1 text-xs font-semibold rounded-full"
                   [class.bg-green-100]="employee.status === 'ACTIVE'"

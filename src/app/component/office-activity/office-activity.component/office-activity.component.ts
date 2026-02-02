@@ -8,8 +8,6 @@ import { OfficeActivity } from '../../../models/office-activity.model';
 import { Employee } from '../../../models/employee.model';
 import { Items } from '../../../models/items.model';
 
-
-
 @Component({
   selector: 'app-office-activity',
   standalone: true,
@@ -19,9 +17,12 @@ import { Items } from '../../../models/items.model';
 })
 export class OfficeActivityComponent implements OnInit {
   showForm: boolean = false;
+  activities: OfficeActivity[] = [];           // raw data
+  filteredActivities: OfficeActivity[] = [];   // displayed data
   employees: Employee[] = [];
   items: Items[] = [];
-  
+  selectedEmployeeId: number | null = null;
+
   formData: any = {
     employee: null,
     item: null,
@@ -33,6 +34,24 @@ export class OfficeActivityComponent implements OnInit {
 
   activityTypes = ['STATIONARY', 'MOBILE_PACK', 'LOAN', 'OTHER'];
 
+  isLoading = {
+    employees: false,
+    items: false,
+    activities: false
+  };
+
+  loadError = {
+    employees: null as string | null,
+    items: null as string | null,
+    activities: null as string | null
+  };
+
+  dateFilter = {
+    type: 'all' as 'all' | 'today' | 'yesterday' | 'custom',
+    startDate: '',
+    endDate: ''
+  };
+
   constructor(
     private activityService: OfficeActivityService,
     private employeeService: EmployeeService,
@@ -42,129 +61,162 @@ export class OfficeActivityComponent implements OnInit {
   ngOnInit(): void {
     this.loadEmployees();
     this.loadItems();
+    this.loadAllActivities();
   }
 
   loadEmployees(): void {
-    this.employeeService.getActiveEmployees().subscribe({
+    this.isLoading.employees = true;
+    this.loadError.employees = null;
+
+    this.employeeService.getAllEmployees().subscribe({
       next: (data) => {
-        if (data && data.length > 0) {
-          this.employees = data;
-        } else {
-          this.loadStaticEmployees();
-        }
+        this.employees = data || [];
+        this.isLoading.employees = false;
       },
       error: (err) => {
-        console.error('Error loading employees:', err);
-        this.loadStaticEmployees();
+        console.error('Failed to load employees:', err);
+        this.loadError.employees = 'Could not load employees. Please try again later.';
+        this.isLoading.employees = false;
       }
     });
-  }
-
-  loadStaticEmployees(): void {
-    this.employees = [
-      {
-        id: 1,
-        employeeCode: 'EMP001',
-        fullName: 'Rajesh Kumar',
-        email: 'rajesh.kumar@company.com',
-        phone: '9841234567',
-        department: 'IT Department',
-        designation: 'Senior Developer',
-        joinDate: '2022-01-15',
-        address: 'Kathmandu, Nepal',
-        status: 'ACTIVE'
-      },
-      {
-        id: 2,
-        employeeCode: 'EMP002',
-        fullName: 'Sita Sharma',
-        email: 'sita.sharma@company.com',
-        phone: '9851234567',
-        department: 'HR Department',
-        designation: 'HR Manager',
-        joinDate: '2021-05-20',
-        address: 'Lalitpur, Nepal',
-        status: 'ACTIVE'
-      },
-      {
-        id: 3,
-        employeeCode: 'EMP003',
-        fullName: 'Amit Thapa',
-        email: 'amit.thapa@company.com',
-        phone: '9861234567',
-        department: 'Marketing',
-        designation: 'Marketing Executive',
-        joinDate: '2023-03-10',
-        address: 'Bhaktapur, Nepal',
-        status: 'ACTIVE'
-      }
-    ];
   }
 
   loadItems(): void {
+    this.isLoading.items = true;
+    this.loadError.items = null;
+
     this.itemsService.getAllItems().subscribe({
       next: (data) => {
-        if (data && data.length > 0) {
-          this.items = data;
-        } else {
-          this.loadStaticItems();
-        }
+        this.items = data || [];
+        this.isLoading.items = false;
       },
       error: (err) => {
-        console.error('Error loading items:', err);
-        this.loadStaticItems();
+        console.error('Failed to load items:', err);
+        this.loadError.items = 'Could not load items. Please try again later.';
+        this.isLoading.items = false;
       }
     });
   }
 
-  loadStaticItems(): void {
-    this.items = [
-      {
-        id: 1,
-        itemName: 'A4 Paper Ream',
-        itemCode: 'ITEM001',
-        category: { id: 1, categoryName: 'Stationary', description: 'Office Stationary' },
-        description: 'High quality A4 size paper',
-        unit: 'Ream',
-        unitPrice: 500
+  onFilterChange(): void {
+    if (this.selectedEmployeeId) {
+      this.loadEmployeeActivities(this.selectedEmployeeId);
+    } else {
+      this.loadAllActivities();
+    }
+  }
+
+  loadAllActivities(): void {
+    this.isLoading.activities = true;
+    this.loadError.activities = null;
+
+    this.employeeService.getAllEmployees().subscribe({
+      next: (employees) => {
+        const allActivities: OfficeActivity[] = [];
+        let loadedCount = 0;
+
+        if (employees.length === 0) {
+          this.activities = [];
+          this.applyDateFilter();
+          this.isLoading.activities = false;
+          return;
+        }
+
+        employees.forEach(employee => {
+          this.activityService.getByEmployee(employee.id!).subscribe({
+            next: (data) => {
+              allActivities.push(...data);
+              loadedCount++;
+              if (loadedCount === employees.length) {
+                this.activities = this.sortActivitiesByDate(allActivities);
+                this.applyDateFilter();
+                this.isLoading.activities = false;
+              }
+            },
+            error: () => {
+              loadedCount++;
+              if (loadedCount === employees.length) {
+                this.activities = this.sortActivitiesByDate(allActivities);
+                this.applyDateFilter();
+                this.isLoading.activities = false;
+              }
+            }
+          });
+        });
       },
-      {
-        id: 2,
-        itemName: 'Blue Pen',
-        itemCode: 'ITEM002',
-        category: { id: 1, categoryName: 'Stationary', description: 'Office Stationary' },
-        description: 'Ball point pen blue color',
-        unit: 'Piece',
-        unitPrice: 20
-      },
-      {
-        id: 3,
-        itemName: 'Mobile Data Pack 50GB',
-        itemCode: 'ITEM003',
-        category: { id: 2, categoryName: 'Mobile', description: 'Mobile Services' },
-        description: 'Monthly data pack 50GB',
-        unit: 'Pack',
-        unitPrice: 1200
-      },
-      {
-        id: 4,
-        itemName: 'Notebook',
-        itemCode: 'ITEM004',
-        category: { id: 1, categoryName: 'Stationary', description: 'Office Stationary' },
-        description: '100 pages ruled notebook',
-        unit: 'Piece',
-        unitPrice: 80
-      },
-      {
-        id: 5,
-        itemName: 'Printer Toner',
-        itemCode: 'ITEM005',
-        category: { id: 3, categoryName: 'Electronics', description: 'Electronic Items' },
-        description: 'HP Laser printer toner',
-        unit: 'Piece',
-        unitPrice: 3500
+      error: (err) => {
+        console.error('Failed to load all activities:', err);
+        this.loadError.activities = 'Failed to load activities.';
+        this.isLoading.activities = false;
       }
-    ];
+    });
+  }
+
+  loadEmployeeActivities(employeeId: number): void {
+    this.isLoading.activities = true;
+    this.loadError.activities = null;
+
+    this.activityService.getByEmployee(employeeId).subscribe({
+      next: (data) => {
+        this.activities = this.sortActivitiesByDate(data || []);
+        this.applyDateFilter();
+        this.isLoading.activities = false;
+      },
+      error: (err) => {
+        console.error('Error loading employee activities:', err);
+        this.loadError.activities = 'Failed to load activities for this employee.';
+        this.isLoading.activities = false;
+      }
+    });
+  }
+
+  private sortActivitiesByDate(activities: OfficeActivity[]): OfficeActivity[] {
+    return [...activities].sort((a, b) => {
+      const dateA = a.issueDate ? new Date(a.issueDate).getTime() : 0;
+      const dateB = b.issueDate ? new Date(b.issueDate).getTime() : 0;
+      return dateB - dateA;
+    });
+  }
+
+  applyDateFilter(): void {
+    let filtered = [...this.activities];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (this.dateFilter.type === 'today') {
+      filtered = filtered.filter(act => {
+        if (!act.issueDate) return false;
+        const d = new Date(act.issueDate);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
+      });
+    }
+    else if (this.dateFilter.type === 'yesterday') {
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      filtered = filtered.filter(act => {
+        if (!act.issueDate) return false;
+        const d = new Date(act.issueDate);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === yesterday.getTime();
+      });
+    }
+    else if (this.dateFilter.type === 'custom' && this.dateFilter.startDate && this.dateFilter.endDate) {
+      const start = new Date(this.dateFilter.startDate);
+      start.setHours(0, 0, 0, 0);
+
+      const end = new Date(this.dateFilter.endDate);
+      end.setHours(23, 59, 59, 999);
+
+      filtered = filtered.filter(act => {
+        if (!act.issueDate) return false;
+        const d = new Date(act.issueDate);
+        return d >= start && d <= end;
+      });
+    }
+
+    this.filteredActivities = filtered;
   }
 
   submitActivity(): void {
@@ -184,18 +236,36 @@ export class OfficeActivityComponent implements OnInit {
 
     this.activityService.issueItem(activity).subscribe({
       next: () => {
-        alert('Activity recorded successfully!');
+        alert('Item issued successfully!');
         this.resetForm();
         this.showForm = false;
+        this.onFilterChange(); // refresh with current filters
       },
       error: (err) => {
-        console.error('Error recording activity:', err);
-        // Simulate success with static data
-        alert('Activity recorded successfully! (Demo mode - Backend not connected)');
-        this.resetForm();
-        this.showForm = false;
+        console.error('Error issuing item:', err);
+        alert('Failed to issue item');
       }
     });
+  }
+
+  getActivityIcon(activityType: string): string {
+    switch (activityType) {
+      case 'STATIONARY': return '📝';
+      case 'MOBILE_PACK': return '📱';
+      case 'LOAN': return '💰';
+      case 'OTHER': return '📦';
+      default: return '📋';
+    }
+  }
+
+  getActivityColor(activityType: string): string {
+    switch (activityType) {
+      case 'STATIONARY': return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'MOBILE_PACK': return 'bg-purple-100 text-purple-800 border-purple-300';
+      case 'LOAN': return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'OTHER': return 'bg-gray-100 text-gray-800 border-gray-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
   }
 
   resetForm(): void {
