@@ -14,7 +14,7 @@ import { LoginRequest } from '../../../models/auth.model';
 })
 export class LoginComponent {
   credentials: LoginRequest = {
-    username: '',
+  employeeCode: '',
     password: ''
   };
   errorMessage: string = '';
@@ -30,21 +30,20 @@ export class LoginComponent {
     }
   }
 
-  login(): void {
-    this.errorMessage = '';
+ login(): void {
     this.loading = true;
 
     this.authService.login(this.credentials).subscribe({
-      next: (response) => {
-        console.log('Login successful:', response);
+      next: () => {
         this.loading = false;
-        this.router.navigate(['/dashboad']);
+        this.router.navigate(['/dashboard']);
       },
-      error: (err) => {
-        console.error('Login error:', err);
-        this.errorMessage = 'Invalid username or password';
+      error: () => {
         this.loading = false;
+        this.errorMessage = 'Invalid employee code or password';
       }
     });
   }
+
+
 }

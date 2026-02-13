@@ -55,10 +55,10 @@ export class App implements OnInit, OnDestroy {  // ✅ IMPLEMENT INTERFACES
     }
   }
 
-  get userInitial(): string {
-    const user = this.authService.getCurrentUser();
-    return user?.username ? user.username.charAt(0).toUpperCase() : 'A';
-  }
+  // get userInitial(): string {
+  //   const user = this.authService.getCurrentUser();
+  //   return user?.username ? user.username.charAt(0).toUpperCase() : '';
+  // }
 
   logout(): void {
     this.authService.logout();
